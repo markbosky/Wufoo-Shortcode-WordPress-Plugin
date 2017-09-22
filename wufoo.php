@@ -2,34 +2,27 @@
 /*
 Plugin Name: Wufoo Shortcode Plugin
 Description: Enables shortcode to embed Wufoo forms. Usage: <code>[wufoo username="chriscoyier" formhash="x7w3w3" autoresize="true" height="458" header="show" ssl="true"]</code>. This code is available to copy and paste directly from the Wufoo Code Manager.
-Version: 1.42
+Version: 1.43
 License: GPL
 Author: Chris Coyier / Wufoo
 Author URI: http://wufoo.com
+Text Domain: wufoo-shortcode
 */
 
-function createWufooEmbedJS( $atts, $content = null ) {
-	$atts = shortcode_atts( array(
+function createWufooEmbedJS($atts, $content = null) {
+	extract(shortcode_atts(array(
 		'username'   => '',
 		'formhash'   => '',
 		'autoresize' => true,
 		'height'     => '500',
 		'header'     => 'show',
 		'ssl'        => '',
+		'title'		 => '',
 		'defaultv'   => '',
 		'entsource'  => 'wordpress',
-	), $atts );
+	), $atts));
 
-	$username   = $atts['username'];
-	$formhash   = $atts['formhash'];
-	$autoresize = $atts['autoresize'];
-	$height     = (int) $atts['height'];
-	$header     = $atts['header'];
-	$ssl        = $atts['ssl'];
-	$defaultv   = $atts['defaultv'];
-	$entsource  = $atts['entsource'];
-
-	if ( ! $username || ! $formhash ) {
+	if (!$username or !$formhash) {
 
 		$error = "
 		<div style='border: 20px solid red; border-radius: 40px; padding: 40px; margin: 50px 0 70px;'>
@@ -41,66 +34,68 @@ function createWufooEmbedJS( $atts, $content = null ) {
 
 	} else {
 
-		$form_url = "http://$username.wufoo.com/forms/$formhash";
-
-		$JSEmbed =  "<div id='wufoo-". esc_attr( $formhash ) ."'>\n";
-		$JSEmbed .= "Fill out my <a href='". esc_url( $form_url ) ."'>online form</a>.\n";
+		$JSEmbed =  "<div id='wufoo-$formhash'>\n";
+		$JSEmbed .= "Fill out my <a href='http://$username.wufoo.com/forms/$formhash'>online form</a>.\n";
 		$JSEmbed .=  "</div>\n";
 
-		$JSEmbed .= "<script type='text/javascript'>var ". esc_js( $formhash ) .";(function(d, t) {\n";
+		$JSEmbed .= "<script type='text/javascript'>var $formhash;(function(d, t) {\n";
 		$JSEmbed .= "var s = d.createElement(t), options = {\n";
-		$JSEmbed .= "'userName'      : '". esc_js( $username ) ."',  \n";
-		$JSEmbed .= "'formHash'      : '". esc_js( $formhash ) ."',  \n";
-		$JSEmbed .= "'autoResize'    : ". esc_js( $autoresize ) .",  \n";
-		$JSEmbed .= "'height'        : '". esc_js( $height ) ."',    \n";
-		$JSEmbed .= "'async'         : true,                         \n";
-		$JSEmbed .= "'header'        : '". esc_js( $header ) ."',    \n";
-		$JSEmbed .= "'host'          : 'wufoo.com',                  \n";
-		$JSEmbed .= "'entSource'     : '". esc_js( $entsource ) ."', \n";
-		$JSEmbed .= "'defaultValues' : '". esc_js( $defaultv ) ."'   \n";
+		$JSEmbed .= "'userName'      : '$username',    \n";
+		$JSEmbed .= "'formHash'      : '$formhash',    \n";
+		$JSEmbed .= "'autoResize'    :  $autoresize,   \n";
+		$JSEmbed .= "'title'    	 : '$title',       \n";
+		$JSEmbed .= "'height'        : '$height',      \n";
+		$JSEmbed .= "'async'         :  true,          \n";
+		$JSEmbed .= "'header'        : '$header',      \n";
+		$JSEmbed .= "'host'          : 'wufoo.com',    \n";
+		$JSEmbed .= "'entSource'     : '$entsource',   \n";
+		$JSEmbed .= "'defaultValues' : '$defaultv'     \n";
 
 		// Only output SSL value if passes as param
 		// Gratis and Ad Hoc plans don't show that param (don't offer SSL)
-		if ( $ssl ) {
-			$JSEmbed .= ",'ssl'          : ". esc_js( $ssl ) ."      \n";
+		if ($ssl) {
+	  		$JSEmbed .= ",'ssl'          :  $ssl           ";
 		}
 		$JSEmbed .= "};\n";
 
-		$JSEmbed .= "s.src = ('https:' == d.location.protocol ? 'https://' : 'http://') + 'wufoo.com/scripts/embed/form.js';\n";
+		$JSEmbed .= "s.src ='".plugins_url( "/form.js", __FILE__ )."';\n";
 		$JSEmbed .= "s.onload = s.onreadystatechange = function() {\n";
 		$JSEmbed .= "var rs = this.readyState; if (rs) if (rs != 'complete') if (rs != 'loaded') return;\n";
-		$JSEmbed .= "try { ". esc_attr( $formhash ) ." = new WufooForm();". esc_attr( $formhash ) .".initialize(options);". esc_attr( $formhash ) .".display(); } catch (e) {}}\n";
+		$JSEmbed .= "try { $formhash = new WufooForm();$formhash.initialize(options);$formhash.display(); } catch (e) {}}\n";
 		$JSEmbed .= "var scr = d.getElementsByTagName(t)[0], par = scr.parentNode; par.insertBefore(s, scr);\n";
 		$JSEmbed .= "})(document, 'script');</script>";
 
 		/**
-		 * iframe embed, loaded inside <noscript> tags
-		 */
-		$iframe_url = 'https://'. $username .'.wufoo.com/embed/'. $formhash . '/';
-		if ( isset( $defaultv ) && '' !== $defaultv ) {
-			$iframe_url .= "def/$defaultv&entsource=wordpress";
-		} else {
-			$iframe_url .= "def/entsource=wordpress";
-		}
+		* iframe embed, loaded inside <noscript> tags
+		*/
 		$iframe_embed = '<iframe ';
 		$iframe_embed .= 'height="'. (int) $height .'" ';
-		$iframe_embed .= 'allowTransparency="true" frameborder="0" scrolling="no" style="width:100%;border:none;" ';
-		$iframe_embed .= 'src="' . esc_url( $iframe_url ) .'">';
-
-		$embed_url = 'https://'. $username .'.wufoo.com/forms/'. $formhash .'/';
-		if ( isset( $defaultv ) && '' !== $defaultv ) {
-			$embed_url .= "def/$defaultv&entsource=wordpress";
-		} else {
-			$embed_url .= "def/entsource=wordpress";
+		$iframe_embed .= 'title="'. $title .'" ';
+		$iframe_embed .= 'allowTransparency="true" frameborder="0" scrolling="no" style="width:100%;border:none;"';
+		$iframe_embed .= 'src="https://'. $username .'.wufoo.com/embed/'. $formhash . '/';
+		if (isset($defaultv) && $defaultv != ''){
+			$iframe_embed .= "def/$defaultv&entsource=wordpress\">";
 		}
-		$iframe_embed .= '<a href="'. esc_url( $embed_url ) .'" rel="nofollow">Fill out my Wufoo form!</a>';
-		$iframe_embed .= '</iframe>';
+		else{
+			$iframe_embed .= "def/entsource=wordpress\">";
+		}
+		$iframe_embed .= '<a href="https://'. $username .'.wufoo.com/forms/'. $formhash .'/';
+		if (isset($defaultv) && $defaultv != ''){
+			$iframe_embed .= "def/$defaultv&entsource=wordpress\" ";
+		}
+		else{
+			$iframe_embed .= "def/entsource=wordpress\" ";
+		}
+		$iframe_embed .= 'rel="nofollow">Fill out my Wufoo form!</a></iframe>';
 
 		/**
-		 * Return embed in JS and iframe
-		 */
+		* Return embed in JS and iframe
+		*/
 		return "$JSEmbed <noscript> $iframe_embed </noscript>";
 
 	}
 }
-add_shortcode( 'wufoo', 'createWufooEmbedJS' );
+
+add_shortcode('wufoo', 'createWufooEmbedJS');
+
+?>
