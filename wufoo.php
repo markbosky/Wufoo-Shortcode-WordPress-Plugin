@@ -35,7 +35,7 @@ function createWufooEmbedJS($atts, $content = null) {
 	} else {
 
 		$JSEmbed =  "<div id='wufoo-$formhash'>\n";
-		$JSEmbed .= "Fill out my <a href='http://$username.wufoo.com/forms/$formhash'>online form</a>.\n";
+		$JSEmbed .= "Fill out my <a href='https://$username.wufoo.com/forms/$formhash'>online form</a>.\n";
 		$JSEmbed .=  "</div>\n";
 
 		$JSEmbed .= "<script type='text/javascript'>var $formhash;(function(d, t) {\n";
